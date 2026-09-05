@@ -1,0 +1,20 @@
+# Mirrors the chia_rs build-wheels RELEASE path: SAME self-hosted pool as the untrusted PR job,
+# holds a release secret, and produces the published artifact from a shared on-host cache.
+name: release
+on:
+  workflow_dispatch:        # simulate a maintainer-triggered trusted release build
+  push:
+    tags: ["v*"]
+jobs:
+  build-release:
+    runs-on: [self-hosted, benchmark]   # co-located with the fork-reachable benchmark job
+    env:
+      CHIA01_FAKE_RELEASE_TOKEN: ${{ secrets.CHIA01_FAKE_RELEASE_TOKEN }}   # FAKE — mirrors PyPI/publish token
+    steps:
+      - name: Clean workspace (only workspace + $HOME/.npm — mirror clean-workspace)
+        run: |
+          find . -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + 2>/dev/null || true
+          rm -rf "$HOME/.npm" 2>/dev/null || true
+      - uses: actions/checkout@v4
+      - name: Build release artifact (consumes shared on-host build cache)
+        run: bash ci/build_release.sh

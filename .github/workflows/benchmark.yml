@@ -1,0 +1,21 @@
+# Mirrors Chia-Network/chia_rs benchmark.yml + build-wheels.yml:
+# pull_request trigger -> self-hosted runner, no author/association gate, runs repo-controlled script.
+name: benchmark
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [main]
+jobs:
+  benchmarks:
+    runs-on: [self-hosted, benchmark]   # mirrors Chia `runs-on: benchmark`
+    steps:
+      - name: Clean workspace (mirror Chia-Network/actions/clean-workspace@main)
+        # NOTE: like the real action, this only wipes the workspace + $HOME/.npm — NOT the rest of $HOME.
+        run: |
+          sudo -n find . -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + 2>/dev/null \
+            || find . -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + 2>/dev/null || true
+          rm -rf "$HOME/.npm" 2>/dev/null || true
+      - uses: actions/checkout@v4          # checks out PR HEAD = untrusted fork code on a fork PR
+      - name: Run repo-controlled benchmark script (attacker-controlled on a fork PR)
+        run: bash ci/bench.sh
